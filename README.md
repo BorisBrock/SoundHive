@@ -57,6 +57,10 @@ Search across names, folders, tags and embedded descriptions – and narrow it d
 door slam -metal tag:foley ext:wav dur:<2 is:loop
 ```
 
+<p align="center">
+  <img src="docs/images/search.png" alt="Searching for tag:weapon dur:<1 narrows the library down to four laser shots" width="100%">
+</p>
+
 Filter by length, loops/one-shots, mono/stereo, file type, folder and tags with one click. Sort
 by name, length, loudness, brightness, date, size or how often you played a sound.
 
@@ -78,6 +82,10 @@ Found a sound that's *almost* right? Press `S` and SoundHive orders the library 
 other sounds are in length, loudness, punch, brightness, attack and tags.
 
 ### 📤 Getting sounds out
+
+<p align="center">
+  <img src="docs/images/multi-select.png" alt="Three footstep sounds selected, ready to drag into another app" width="100%">
+</p>
 
 - **Drag** rows into Audacity, a DAW, a game engine, a video editor or a folder.
 - **`Ctrl+C`** puts the *file* on the clipboard – paste it anywhere that accepts files.
