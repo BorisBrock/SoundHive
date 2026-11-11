@@ -81,8 +81,12 @@ jobs:
           # resolving, and apt then retries it for every package for hours. Use the main archive.
           sudo sed -i 's|mirror+file:/etc/apt/apt-mirrors.txt|http://archive.ubuntu.com/ubuntu/|' /etc/apt/sources.list.d/ubuntu.sources
           grep -h '^URIs' /etc/apt/sources.list.d/ubuntu.sources
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          # Never prompt, give up on unresponsive servers instead of hanging, and skip IPv6
+          # (a dead IPv6 route to the archive makes apt stall).
+          export DEBIAN_FRONTEND=noninteractive
+          APT="-o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o Acquire::ForceIPv4=true"
+          sudo -E apt-get $APT update
+          sudo -E apt-get $APT install -y --no-install-recommends \
             libwebkit2gtk-4.1-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev \
             libayatana-appindicator3-dev librsvg2-dev libasound2-dev patchelf file
 
