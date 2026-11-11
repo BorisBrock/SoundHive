@@ -5,10 +5,12 @@
   import { confirmState } from "$lib/confirm.svelte";
   import { contextMenu } from "$lib/contextMenu.svelte";
   import { player } from "$lib/player.svelte";
+  import { projects } from "$lib/project.svelte";
   import ConfirmDialog from "$lib/components/ConfirmDialog.svelte";
   import ContextMenu from "$lib/components/ContextMenu.svelte";
   import DetailPanel from "$lib/components/DetailPanel.svelte";
   import HelpDialog from "$lib/components/HelpDialog.svelte";
+  import ProjectPanel from "$lib/components/ProjectPanel.svelte";
   import Icon from "$lib/components/Icon.svelte";
   import SettingsDialog from "$lib/components/SettingsDialog.svelte";
   import Sidebar from "$lib/components/Sidebar.svelte";
@@ -21,6 +23,7 @@
 
   onMount(() => {
     library.load();
+    projects.load();
     // Folders dropped onto the window are added to the library.
     const unlisten = getCurrentWebview().onDragDropEvent((e) => {
       const p = e.payload;
@@ -39,10 +42,14 @@
     const clear = () => setTimeout(() => (library.draggingOut = null), 500);
     window.addEventListener("pointerup", clear);
     window.addEventListener("focus", clear);
+    // Back from the game, engine or editor: pick up files changed there.
+    const refreshProject = () => projects.refresh(true);
+    window.addEventListener("focus", refreshProject);
     return () => {
       unlisten.then((f) => f());
       window.removeEventListener("pointerup", clear);
       window.removeEventListener("focus", clear);
+      window.removeEventListener("focus", refreshProject);
     };
   });
 
@@ -65,10 +72,12 @@
   }
   const left = panel("sidebarWidth", 264, 200, 480);
   const right = panel("detailWidth", 360, 300, 640);
-  let resizing = $state<"left" | "right" | null>(null);
+  const middle = panel("projectWidth", 300, 240, 520);
+  let resizing = $state<"left" | "middle" | "right" | null>(null);
 
   function onSplitterMove(e: PointerEvent) {
     if (resizing === "left") left.set(e.clientX);
+    else if (resizing === "middle") middle.set(e.clientX - left.width);
     else if (resizing === "right") right.set(window.innerWidth - e.clientX);
   }
 
@@ -129,6 +138,8 @@
       run(() => library.selectAll());
     } else if (mod && key === "c") {
       run(() => (e.shiftKey ? library.copyPaths() : library.copyFiles()));
+    } else if (e.altKey && !mod && (e.key === "ArrowDown" || e.key === "ArrowUp") && projects.active) {
+      run(() => projects.step(e.key === "ArrowDown" ? 1 : -1));
     } else if (mod || e.altKey) {
       return;
     } else if (key === "l") {
@@ -143,6 +154,12 @@
       run(() => library.reveal());
     } else if (key === "p") {
       run(() => library.copyToFolder());
+    } else if (key === "r" && projects.active) {
+      run(() => projects.replace());
+    } else if (key === "a" && projects.slot) {
+      run(() => projects.toggleApproved());
+    } else if (key === "g" && projects.slot) {
+      run(() => player.toggleSlot(projects.slot));
     } else if (key === "t") {
       run(() => document.getElementById("tag-input")?.focus());
     } else if (e.key === "?") {
@@ -164,6 +181,10 @@
   <div class="flex min-h-0 flex-1">
     <Sidebar width={left.width} />
     {@render splitter("left", "Resize sidebar", () => left.reset())}
+    {#if projects.active}
+      <ProjectPanel width={middle.width} />
+      {@render splitter("middle", "Resize project panel", () => middle.reset())}
+    {/if}
 
     <main class="flex min-w-0 flex-1 flex-col">
       {#if library.loaded && !library.folders.length}
@@ -196,7 +217,7 @@
   <StatusBar />
 </div>
 
-{#snippet splitter(side: "left" | "right", label: string, reset: () => void)}
+{#snippet splitter(side: "left" | "middle" | "right", label: string, reset: () => void)}
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     title="Drag to resize, double-click to reset"

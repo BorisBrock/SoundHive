@@ -11,6 +11,7 @@ use crate::db;
 use crate::error::{AppResult, invalid};
 use crate::models::*;
 use crate::player::{PlayRequest, Player};
+use crate::project;
 use crate::scan::{self, Scanner, Scope};
 use crate::system::{self, FileClipboard};
 
@@ -287,4 +288,88 @@ pub async fn start_drag(db: DbState<'_>, app: AppHandle, ids: Vec<i64>) -> AppRe
     })
     .map_err(|e| invalid(e.to_string()))?;
     rx.recv().map_err(|e| invalid(e.to_string()))?
+}
+
+// ---- target projects -------------------------------------------------------------------------
+
+fn data_dir(app: &AppHandle) -> AppResult<PathBuf> {
+    app.path().app_data_dir().map_err(|e| invalid(e.to_string()))
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn list_projects(db: DbState<'_>) -> AppResult<Vec<Project>> {
+    with_db(&db, project::list_projects)
+}
+
+/// Adds a sound folder (of a game, a video, …) as a project; returns its id.
+#[tauri::command]
+#[specta::specta]
+pub async fn add_project(db: DbState<'_>, path: String) -> AppResult<i64> {
+    let id = with_db(&db, |conn| project::add_project(conn, &path))?;
+    project::refresh(&db.0, id)?;
+    Ok(id)
+}
+
+/// Forgets a project and the backups of its originals; the project's files stay as they are.
+#[tauri::command]
+#[specta::specta]
+pub async fn remove_project(db: DbState<'_>, app: AppHandle, id: i64) -> AppResult<()> {
+    let dir = data_dir(&app)?;
+    with_db(&db, |conn| project::remove_project(conn, &dir, id))
+}
+
+/// Picks up added, changed and removed files of a project; returns its slots.
+#[tauri::command]
+#[specta::specta]
+pub async fn refresh_project(db: DbState<'_>, id: i64) -> AppResult<Vec<Slot>> {
+    project::refresh(&db.0, id)
+}
+
+/// Puts a library sound into a slot (the original is backed up first).
+#[tauri::command]
+#[specta::specta]
+pub async fn replace_slot(db: DbState<'_>, app: AppHandle, slot_id: i64, sound_id: i64) -> AppResult<Slot> {
+    let dir = data_dir(&app)?;
+    with_db(&db, |conn| project::replace(conn, &dir, slot_id, sound_id))
+}
+
+/// Puts a slot's original file back.
+#[tauri::command]
+#[specta::specta]
+pub async fn restore_slot(db: DbState<'_>, app: AppHandle, slot_id: i64) -> AppResult<Slot> {
+    let dir = data_dir(&app)?;
+    with_db(&db, |conn| project::restore(conn, &dir, slot_id))
+}
+
+/// Marks a slot as done, or opens it again.
+#[tauri::command]
+#[specta::specta]
+pub async fn set_slot_approved(db: DbState<'_>, slot_id: i64, approved: bool) -> AppResult<Slot> {
+    with_db(&db, |conn| project::set_approved(conn, slot_id, approved))
+}
+
+/// Plays a slot's file as it is now. The player reports it as sound `-slot_id`.
+#[tauri::command]
+#[specta::specta]
+pub async fn play_slot(
+    db: DbState<'_>,
+    player: State<'_, Player>,
+    slot_id: i64,
+    start: f64,
+    looping: bool,
+    volume: f64,
+) -> AppResult<()> {
+    let (path, duration) = with_db(&db, |conn| {
+        Ok((project::slot_file(conn, slot_id)?, project::get_slot(conn, slot_id)?.duration))
+    })?;
+    player.play(PlayRequest { sound_id: -slot_id, path, start, looping, volume: volume as f32, duration })
+}
+
+/// Shows a slot's file in the file manager.
+#[tauri::command]
+#[specta::specta]
+pub async fn reveal_slot(db: DbState<'_>, slot_id: i64) -> AppResult<()> {
+    let path = with_db(&db, |conn| project::slot_file(conn, slot_id))?;
+    system::reveal(&path.to_string_lossy())
 }

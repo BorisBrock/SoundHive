@@ -2,19 +2,27 @@
   import { commands } from "$lib/bindings";
   import { attempt, library } from "$lib/app.svelte";
   import { player } from "$lib/player.svelte";
+  import { projects } from "$lib/project.svelte";
   import { formatClock } from "$lib/sounds";
   import Icon from "./Icon.svelte";
 
   const scan = $derived(library.scan);
   const pct = $derived(scan && scan.total ? Math.round((scan.done / scan.total) * 100) : 0);
   let lastVolume = 0.8;
+  /** Project sounds play as negative ids. */
+  const playingName = $derived(
+    player.current?.name ??
+      (player.currentId !== null && player.currentId < 0
+        ? projects.slots.find((s) => s.id === -player.currentId!)?.name
+        : undefined),
+  );
 </script>
 
 <footer class="flex h-8 shrink-0 items-center gap-4 border-t border-line bg-surface px-3 text-xs text-muted">
-  {#if player.current}
+  {#if playingName}
     <span class="flex min-w-0 items-center gap-1.5" class:text-accent={player.playing}>
       <Icon name={player.playing ? "audio-lines" : "stop"} size={13} />
-      <span class="max-w-64 truncate">{player.current.name}</span>
+      <span class="max-w-64 truncate">{playingName}</span>
       {#if player.playing}<span class="font-mono tabular-nums">{formatClock(player.position)}</span>{/if}
     </span>
   {/if}

@@ -5,6 +5,7 @@ mod error;
 mod events;
 mod models;
 mod player;
+mod project;
 mod scan;
 mod system;
 mod tagging;
@@ -50,6 +51,15 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::open_folder,
             commands::copy_to_folder,
             commands::start_drag,
+            commands::list_projects,
+            commands::add_project,
+            commands::remove_project,
+            commands::refresh_project,
+            commands::replace_slot,
+            commands::restore_slot,
+            commands::set_slot_approved,
+            commands::play_slot,
+            commands::reveal_slot,
         ])
         .events(collect_events![events::ScanProgressed, events::LibraryChanged])
         .constant("WAVEFORM_BUCKETS", analysis::WAVEFORM_BUCKETS)

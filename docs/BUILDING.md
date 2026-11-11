@@ -69,4 +69,5 @@ cd src-tauri && SOUNDHIVE_BENCH=/path/to/sfx cargo test --release bench_scan -- 
 ## App data
 
 The library database lives in `~/.local/share/dev.soundhive.app` on Linux and
-`%APPDATA%\dev.soundhive.app` on Windows. Sound files are only ever read, never changed.
+`%APPDATA%\dev.soundhive.app` on Windows, the backups of target project originals in its
+`projects/` folder. Library sound files are only ever read, never changed.

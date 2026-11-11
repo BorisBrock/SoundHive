@@ -52,6 +52,23 @@ export const commands = {
 	copyToFolder: (ids: number[], folder: string) => __TAURI_INVOKE<string[]>("copy_to_folder", { ids, folder }),
 	/**  Drags the sound files out of the window, into other apps. */
 	startDrag: (ids: number[]) => __TAURI_INVOKE<null>("start_drag", { ids }),
+	listProjects: () => __TAURI_INVOKE<Project[]>("list_projects"),
+	/**  Adds a sound folder (of a game, a video, …) as a project; returns its id. */
+	addProject: (path: string) => __TAURI_INVOKE<number>("add_project", { path }),
+	/**  Forgets a project and the backups of its originals; the project's files stay as they are. */
+	removeProject: (id: number) => __TAURI_INVOKE<null>("remove_project", { id }),
+	/**  Picks up added, changed and removed files of a project; returns its slots. */
+	refreshProject: (id: number) => __TAURI_INVOKE<Slot_Serialize[]>("refresh_project", { id }),
+	/**  Puts a library sound into a slot (the original is backed up first). */
+	replaceSlot: (slotId: number, soundId: number) => __TAURI_INVOKE<Slot_Serialize>("replace_slot", { slotId, soundId }),
+	/**  Puts a slot's original file back. */
+	restoreSlot: (slotId: number) => __TAURI_INVOKE<Slot_Serialize>("restore_slot", { slotId }),
+	/**  Marks a slot as done, or opens it again. */
+	setSlotApproved: (slotId: number, approved: boolean) => __TAURI_INVOKE<Slot_Serialize>("set_slot_approved", { slotId, approved }),
+	/**  Plays a slot's file as it is now. The player reports it as sound `-slot_id`. */
+	playSlot: (slotId: number, start: number | null, looping: boolean, volume: number | null) => __TAURI_INVOKE<null>("play_slot", { slotId, start, looping, volume }),
+	/**  Shows a slot's file in the file manager. */
+	revealSlot: (slotId: number) => __TAURI_INVOKE<null>("reveal_slot", { slotId }),
 };
 
 /** Events */
@@ -118,6 +135,17 @@ export type PlaybackState_Serialize = {
 	looping: boolean,
 };
 
+/**  A project's sound folder (of a game, a video, …) whose files ("slots") get replaced with library sounds. */
+export type Project = {
+	id: number,
+	path: string,
+	name: string,
+	slotCount: number,
+	approvedCount: number,
+	/**  False if the folder is not there (e.g. an unplugged drive). */
+	available: boolean,
+};
+
 /**  Progress of a library scan, pushed to the frontend a few times per second. */
 export type ScanProgress = {
 	/**  `listing`, `analyzing`, `done` or `cancelled`. */
@@ -166,6 +194,86 @@ export type Settings_Serialize = {
 	tagRules: TagRule[],
 	/**  Folder that "Copy to project" copies files into. */
 	exportFolder: string,
+};
+
+/**  One sound file of a project. */
+export type Slot = Slot_Serialize | Slot_Deserialize;
+
+/**  Where a slot is on its way from makeshift sound to the real one. */
+export type SlotStatus = 
+/**  Still holds its original file. */
+"placeholder" | 
+/**  Holds a library sound that is being tried out in the project. */
+"trying" | 
+/**  Done: the sound fits. */
+"approved";
+
+export type SlotTry = {
+	sourcePath: string,
+	/**  Unix milliseconds. */
+	tried: number,
+};
+
+/**  One sound file of a project. */
+export type Slot_Deserialize = {
+	id: number,
+	projectId: number,
+	/**  Path relative to the project folder, `/`-separated. */
+	relPath: string,
+	/**  File name without extension. */
+	name: string,
+	/**  Folder relative to the project folder, `/`-separated; empty at the top. */
+	dir: string,
+	/**  Lower-case extension without dot. */
+	ext: string,
+	/**  Seconds; 0 if unknown. */
+	duration: number | null,
+	sampleRate: number,
+	channels: number,
+	/**
+	 *  Peak envelope of the file as it is now, `WAVEFORM_BUCKETS` values in 0..=255; empty if
+	 *  it could not be analysed.
+	 */
+	peaks: number[],
+	error?: string | null,
+	status: SlotStatus,
+	/**  The library file SoundHive last put in; null while the slot holds its original. */
+	sourcePath?: string | null,
+	/**  Whether the original is backed up, i.e. can be restored. */
+	backedUp: boolean,
+	/**  Library files tried in this slot, the latest first. */
+	tries: SlotTry[],
+};
+
+/**  One sound file of a project. */
+export type Slot_Serialize = {
+	id: number,
+	projectId: number,
+	/**  Path relative to the project folder, `/`-separated. */
+	relPath: string,
+	/**  File name without extension. */
+	name: string,
+	/**  Folder relative to the project folder, `/`-separated; empty at the top. */
+	dir: string,
+	/**  Lower-case extension without dot. */
+	ext: string,
+	/**  Seconds; 0 if unknown. */
+	duration: number | null,
+	sampleRate: number,
+	channels: number,
+	/**
+	 *  Peak envelope of the file as it is now, `WAVEFORM_BUCKETS` values in 0..=255; empty if
+	 *  it could not be analysed.
+	 */
+	peaks: number[],
+	error: string | null,
+	status: SlotStatus,
+	/**  The library file SoundHive last put in; null while the slot holds its original. */
+	sourcePath: string | null,
+	/**  Whether the original is backed up, i.e. can be restored. */
+	backedUp: boolean,
+	/**  Library files tried in this slot, the latest first. */
+	tries: SlotTry[],
 };
 
 /**  One sound file with what the scan found out about it. */

@@ -4,6 +4,7 @@
   import { soundMenu } from "$lib/actions";
   import { contextMenu } from "$lib/contextMenu.svelte";
   import { player } from "$lib/player.svelte";
+  import { projects } from "$lib/project.svelte";
   import { formatDuration, LOOP_LABELS, normExt, type SortKey } from "$lib/sounds";
   import Icon from "./Icon.svelte";
   import Waveform from "./Waveform.svelte";
@@ -72,10 +73,10 @@
 
   const columns: { key: SortKey | null; label: string; class: string }[] = [
     { key: "name", label: "Name", class: "flex-1 min-w-0" },
-    { key: null, label: "Waveform", class: "w-40 hidden lg:block" },
+    { key: null, label: "Waveform", class: "w-40 hidden @2xl:block" },
     { key: "duration", label: "Length", class: "w-16 text-right" },
-    { key: null, label: "Format", class: "w-24 hidden md:block" },
-    { key: null, label: "Tags", class: "w-56 hidden xl:block" },
+    { key: null, label: "Format", class: "w-24 hidden @md:block" },
+    { key: null, label: "Tags", class: "w-56 hidden @4xl:block" },
   ];
 
   function sortBy(key: SortKey) {
@@ -88,7 +89,7 @@
   }
 </script>
 
-<div class="flex min-h-0 flex-1 flex-col">
+<div class="@container flex min-h-0 flex-1 flex-col">
   <div
     class="flex h-8 shrink-0 items-center gap-3 border-b border-line bg-surface pr-4 pl-3 text-[11px] font-semibold tracking-wider text-muted uppercase"
   >
@@ -126,6 +127,7 @@
         {@const sel = isSelected(s)}
         {@const current = player.currentId === s.id}
         {@const playing = current && player.playing}
+        {@const tried = projects.tried.get(s.path)}
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <div
           role="option"
@@ -178,7 +180,22 @@
 
           <div class="min-w-0 flex-1 leading-tight">
             <div class="flex items-center gap-1.5">
-              <span class="truncate font-medium" class:text-accent={current} title={s.name}>{s.name}</span>
+              <span
+                class="truncate font-medium"
+                class:text-accent={current}
+                class:opacity-50={tried === "tried"}
+                title={s.name}>{s.name}</span
+              >
+              {#if tried === "current"}
+                <span
+                  class="shrink-0 rounded bg-honey/15 px-1 text-[10px] font-semibold text-honey uppercase"
+                  title="This sound is in the project as {projects.slot?.name}">in use</span
+                >
+              {:else if tried === "tried"}
+                <span class="shrink-0 text-muted" title="Already tried as {projects.slot?.name}">
+                  <Icon name="history" size={12} />
+                </span>
+              {/if}
               {#if s.loopKind}
                 <span class="shrink-0 text-accent" title="Loop: {LOOP_LABELS[s.loopKind] ?? s.loopKind}">
                   <Icon name="repeat" size={12} />
@@ -197,7 +214,7 @@
             {/if}
           </div>
 
-          <div class="hidden w-40 shrink-0 lg:block">
+          <div class="hidden w-40 shrink-0 @2xl:block">
             <Waveform
               id={s.id}
               height={24}
@@ -215,13 +232,13 @@
             {formatDuration(s.duration)}
           </div>
 
-          <div class="hidden w-24 shrink-0 text-xs text-muted md:block">
+          <div class="hidden w-24 shrink-0 text-xs text-muted @md:block">
             <span class="font-medium text-fg/80 uppercase">{normExt(s.ext)}</span>
             {#if s.sampleRate}· {Math.round(s.sampleRate / 100) / 10}k{/if}
             {#if s.channels === 1}· M{:else if s.channels === 2}· S{/if}
           </div>
 
-          <div class="hidden w-56 shrink-0 gap-1 overflow-hidden xl:flex">
+          <div class="hidden w-56 shrink-0 gap-1 overflow-hidden @4xl:flex">
             {#each s.tags.slice(0, 4) as tag (tag)}
               <button
                 class="chip shrink-0 py-0! text-[11px]!"

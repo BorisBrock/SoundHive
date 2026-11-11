@@ -41,6 +41,10 @@ file type and tags. The list sorts by name, length, loudness, brightness, date, 
 | `E` | Open in the editor (Audacity, or the one set in Settings) |
 | `O` | Show in the file manager |
 | `P` | Copy into the project folder |
+| `R` | Target project: put the selected sound into the project |
+| `A` | Target project: done, go to the next project sound |
+| `G` | Target project: play the project's sound |
+| `Alt+↑` / `↓` | Target project: previous / next project sound |
 | `Ctrl+A` | Select all sounds in the list |
 | `Ctrl+K` or `/` | Search |
 | `Esc` | Stop, clear the search, close dialogs |
@@ -57,6 +61,38 @@ file type and tags. The list sorts by name, length, loudness, brightness, date, 
 - **`P`** copies it into your project folder (asked once, then remembered). Existing files are
   never overwritten.
 - **`O`** shows it in the file manager.
+
+## Replacing a project's sounds
+
+Is your game, video or app full of makeshift sounds? A target project helps you swap them for
+real ones, one at a time, and keeps track of how far you are.
+
+1. Click **`+`** next to *Target projects* in the sidebar and pick the project's sound folder.
+   Every sound file in it shows up in the project panel.
+2. Click a project sound. SoundHive searches the library for its name (`SFX_DoorOpen_02` →
+   `door open`). Browse the results with `↑`/`↓`, and press `G` to hear what the project uses
+   now.
+3. Press **`R`** to put the selected library sound into the project. It takes the project file's
+   name and place, so your game engine or video editor picks it up the next time it loads the
+   file.
+4. Try it out in the project. Not right? Pick another sound and press `R` again. Sounds you
+   already tried are marked in the library list, and the panel lists them so you can go back to
+   one.
+5. Fits? Press **`A`**. The sound is marked as done and the next open one is selected.
+
+Good to know:
+
+- Before a project file is replaced the first time, SoundHive backs it up. **Original** in the
+  panel puts it back at any time. The backups are kept in SoundHive's data folder, not in your
+  project.
+- Files are replaced in one step, so a game engine or editor that watches the folder never sees
+  a half-written file.
+- A WAV project file takes any sound: other formats are converted to 16-bit WAV. Other project
+  files need a sound of their own format (OGG for OGG, …). The library is filtered to it
+  automatically.
+- When you come back to SoundHive, it picks up files you added, changed or removed in the
+  project's folder.
+- Your library files are only ever read, never changed.
 
 ## What SoundHive measures
 

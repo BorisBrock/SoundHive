@@ -140,3 +140,85 @@ pub struct PlaybackState {
     pub position: f64,
     pub looping: bool,
 }
+
+/// A project's sound folder (of a game, a video, …) whose files ("slots") get replaced with library sounds.
+#[derive(Debug, Clone, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct Project {
+    pub id: i64,
+    pub path: String,
+    pub name: String,
+    pub slot_count: i64,
+    pub approved_count: i64,
+    /// False if the folder is not there (e.g. an unplugged drive).
+    pub available: bool,
+}
+
+/// Where a slot is on its way from makeshift sound to the real one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "snake_case")]
+pub enum SlotStatus {
+    /// Still holds its original file.
+    Placeholder,
+    /// Holds a library sound that is being tried out in the project.
+    Trying,
+    /// Done: the sound fits.
+    Approved,
+}
+
+impl SlotStatus {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            SlotStatus::Placeholder => "placeholder",
+            SlotStatus::Trying => "trying",
+            SlotStatus::Approved => "approved",
+        }
+    }
+
+    pub fn parse(s: &str) -> Self {
+        match s {
+            "trying" => SlotStatus::Trying,
+            "approved" => SlotStatus::Approved,
+            _ => SlotStatus::Placeholder,
+        }
+    }
+}
+
+/// One sound file of a project.
+#[derive(Debug, Clone, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct Slot {
+    pub id: i64,
+    pub project_id: i64,
+    /// Path relative to the project folder, `/`-separated.
+    pub rel_path: String,
+    /// File name without extension.
+    pub name: String,
+    /// Folder relative to the project folder, `/`-separated; empty at the top.
+    pub dir: String,
+    /// Lower-case extension without dot.
+    pub ext: String,
+    /// Seconds; 0 if unknown.
+    pub duration: f64,
+    pub sample_rate: i64,
+    pub channels: i64,
+    /// Peak envelope of the file as it is now, `WAVEFORM_BUCKETS` values in 0..=255; empty if
+    /// it could not be analysed.
+    pub peaks: Vec<u8>,
+    pub error: Option<String>,
+    pub status: SlotStatus,
+    /// The library file SoundHive last put in; null while the slot holds its original.
+    pub source_path: Option<String>,
+    /// Whether the original is backed up, i.e. can be restored.
+    pub backed_up: bool,
+    /// Library files tried in this slot, the latest first.
+    pub tries: Vec<SlotTry>,
+}
+
+#[derive(Debug, Clone, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SlotTry {
+    pub source_path: String,
+    /// Unix milliseconds.
+    pub tried: i64,
+}

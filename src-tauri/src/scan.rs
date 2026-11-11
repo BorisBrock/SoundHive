@@ -168,7 +168,7 @@ fn unix_secs(time: std::io::Result<std::time::SystemTime>) -> i64 {
 }
 
 /// Lists the sound files below `root`.
-fn list_files(folder_id: i64, root: &Path, cancel: &AtomicBool) -> Vec<FileEntry> {
+pub(crate) fn list_files(folder_id: i64, root: &Path, cancel: &AtomicBool) -> Vec<FileEntry> {
     walkdir::WalkDir::new(root)
         .follow_links(true)
         .into_iter()

@@ -8,6 +8,7 @@
    */
   let {
     id,
+    peaks: given,
     progress = null,
     height = 28,
     dim = false,
@@ -15,6 +16,8 @@
     duration = 0,
   }: {
     id: number;
+    /** The envelope to draw, instead of the library sound `id`'s. */
+    peaks?: number[];
     /** Playhead position 0..1, or null when not playing. */
     progress?: number | null;
     height?: number;
@@ -27,7 +30,7 @@
   let width = $state(0);
   let hover = $state<number | null>(null);
 
-  const peaks = $derived(waveforms.get(id));
+  const peaks = $derived(given ? (given.length ? given : undefined) : waveforms.get(id));
 
   function color(name: string) {
     return getComputedStyle(canvas).getPropertyValue(name).trim() || "#7c9cff";

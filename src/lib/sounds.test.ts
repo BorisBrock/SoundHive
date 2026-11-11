@@ -9,6 +9,7 @@ import {
   matches,
   parseQuery,
   prepareSound,
+  searchFromName,
   tagCounts,
 } from "./sounds";
 
@@ -154,5 +155,16 @@ describe("facets", () => {
     expect(formatDuration(0.5)).toBe("0.50s");
     expect(formatDuration(12.34)).toBe("12.3s");
     expect(formatDuration(125)).toBe("2:05");
+  });
+});
+
+describe("searchFromName", () => {
+  it("turns project file names into search words", () => {
+    expect(searchFromName("door_open")).toBe("door open");
+    expect(searchFromName("SFX_DoorOpen_02")).toBe("door open");
+    expect(searchFromName("snd-laser-shot-v2")).toBe("laser shot");
+    expect(searchFromName("explosion3")).toBe("explosion");
+    expect(searchFromName("ui click (copy)")).toBe("ui click");
+    expect(searchFromName("01")).toBe("");
   });
 });

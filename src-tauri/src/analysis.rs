@@ -304,6 +304,69 @@ pub fn analyze(path: &Path) -> Result<Analysis, String> {
     Ok(analysis)
 }
 
+/// Decoded audio: interleaved samples in -1..=1.
+pub struct Pcm {
+    pub sample_rate: u32,
+    pub channels: u16,
+    pub samples: Vec<f32>,
+}
+
+/// Decodes a whole sound file, up to `max_seconds`; longer files are an error.
+pub fn decode(path: &Path, max_seconds: u64) -> Result<Pcm, String> {
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
+    let file = File::open(path).map_err(|e| e.to_string())?;
+    let mss = MediaSourceStream::new(Box::new(file), Default::default());
+    let mut hint = Hint::new();
+    hint.with_extension(&ext);
+    let format_opts = FormatOptions { enable_gapless: true, ..Default::default() };
+    let mut format = symphonia::default::get_probe()
+        .format(&hint, mss, &format_opts, &MetadataOptions::default())
+        .map_err(|e| format!("unsupported format: {e}"))?
+        .format;
+    let track =
+        format.tracks().iter().find(|t| t.codec_params.codec != CODEC_TYPE_NULL).ok_or("no audio track")?;
+    let track_id = track.id;
+    let mut decoder = symphonia::default::get_codecs()
+        .make(&track.codec_params, &DecoderOptions::default())
+        .map_err(|e| format!("unsupported codec: {e}"))?;
+
+    let mut spec: Option<SignalSpec> = None;
+    let mut buffer: Option<SampleBuffer<f32>> = None;
+    let mut samples = Vec::new();
+    loop {
+        let packet = match format.next_packet() {
+            Ok(p) => p,
+            Err(SymError::IoError(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof => break,
+            Err(SymError::ResetRequired) => break,
+            // A broken tail is common; keep what was decoded so far.
+            Err(_) if !samples.is_empty() => break,
+            Err(e) => return Err(e.to_string()),
+        };
+        if packet.track_id() != track_id {
+            continue;
+        }
+        let decoded = match decoder.decode(&packet) {
+            Ok(d) => d,
+            Err(SymError::DecodeError(_)) | Err(SymError::IoError(_)) => continue,
+            Err(e) => return Err(e.to_string()),
+        };
+        let s = *spec.get_or_insert(*decoded.spec());
+        let needed = decoded.capacity() * s.channels.count();
+        if buffer.as_ref().is_none_or(|b| b.capacity() < needed) {
+            buffer = Some(SampleBuffer::new(decoded.capacity() as u64, s));
+        }
+        let buf = buffer.as_mut().unwrap();
+        buf.copy_interleaved_ref(decoded);
+        samples.extend_from_slice(buf.samples());
+        let channels = s.channels.count().max(1) as u64;
+        if samples.len() as u64 > max_seconds * s.rate as u64 * channels {
+            return Err(format!("longer than {} minutes", max_seconds / 60));
+        }
+    }
+    let spec = spec.ok_or("no audio data")?;
+    Ok(Pcm { sample_rate: spec.rate, channels: spec.channels.count() as u16, samples })
+}
+
 /// Picks a description and game-engine loop markers (`LOOPSTART`, as used by RPG Maker and
 /// others) from a file's tags.
 fn read_tags(rev: &MetadataRevision, description: &mut String, marked_loop: &mut bool) {

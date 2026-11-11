@@ -24,23 +24,44 @@ class PlayerState {
   current = $derived(this.currentId !== null ? library.byId.get(this.currentId) : undefined);
 
   async play(sound: Sound, start = 0) {
-    const token = ++this.token;
-    const ok = await attempt(async () => {
-      await commands.play(sound.id, start, this.loop, library.settings.volume);
-      return true;
-    });
-    if (!ok || token !== this.token) return;
-    this.currentId = sound.id;
-    this.duration = sound.duration;
-    this.playing = true;
-    this.setBase(start);
-    this.position = start;
-    this.startTicking();
-    if (start === 0) {
+    const ok = await this.start(sound.id, sound.duration, start, () =>
+      commands.play(sound.id, start, this.loop, library.settings.volume),
+    );
+    if (ok && start === 0) {
       // Counted by the backend; reflect it without reloading.
       sound.playCount++;
       sound.lastPlayed = Math.floor(Date.now() / 1000);
     }
+  }
+
+  /** Plays a target project's sound file as it is now; it plays as id `-slot.id`. */
+  async playSlot(slot: { id: number; duration: number }, start = 0) {
+    await this.start(-slot.id, slot.duration, start, () =>
+      commands.playSlot(slot.id, start, this.loop, library.settings.volume),
+    );
+  }
+
+  /** Space for a slot: plays it, or stops it if it is playing. */
+  async toggleSlot(slot: { id: number; duration: number } | undefined) {
+    if (!slot) return;
+    if (this.playing && this.currentId === -slot.id) await this.stop();
+    else await this.playSlot(slot);
+  }
+
+  private async start(id: number, duration: number, start: number, command: () => Promise<null>) {
+    const token = ++this.token;
+    const ok = await attempt(async () => {
+      await command();
+      return true;
+    });
+    if (!ok || token !== this.token) return false;
+    this.currentId = id;
+    this.duration = duration;
+    this.playing = true;
+    this.setBase(start);
+    this.position = start;
+    this.startTicking();
+    return true;
   }
 
   async stop() {
@@ -65,6 +86,18 @@ class PlayerState {
       await attempt(() => commands.seek(seconds));
     } else {
       await this.play(sound, seconds);
+    }
+  }
+
+  /** `seek` for a target project's sound file. */
+  async seekSlot(slot: { id: number; duration: number }, seconds: number) {
+    seconds = Math.max(0, Math.min(seconds, Math.max(0, slot.duration - 0.01)));
+    if (this.playing && this.currentId === -slot.id) {
+      this.setBase(seconds);
+      this.position = seconds;
+      await attempt(() => commands.seek(seconds));
+    } else {
+      await this.playSlot(slot, seconds);
     }
   }
 

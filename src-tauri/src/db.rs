@@ -11,7 +11,8 @@ use crate::models::{Folder, Settings, Sound, Waveform};
 use crate::tagging::normalize_tag;
 
 /// Schema migrations, applied in order; `user_version` counts the applied ones.
-const MIGRATIONS: &[&str] = &[r#"
+const MIGRATIONS: &[&str] = &[
+    r#"
 CREATE TABLE folders (
     id INTEGER PRIMARY KEY,
     path TEXT NOT NULL UNIQUE,
@@ -62,7 +63,44 @@ CREATE TABLE settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
-"#];
+"#,
+    r#"
+-- Target projects: folders (of a game, a video, …) whose sound files ("slots") get replaced with library sounds.
+CREATE TABLE projects (
+    id INTEGER PRIMARY KEY,
+    path TEXT NOT NULL UNIQUE,
+    added INTEGER NOT NULL
+);
+CREATE TABLE slots (
+    id INTEGER PRIMARY KEY,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    -- Relative to the project folder, `/`-separated.
+    rel_path TEXT NOT NULL,
+    size INTEGER NOT NULL DEFAULT 0,
+    modified INTEGER NOT NULL DEFAULT 0,
+    duration REAL NOT NULL DEFAULT 0,
+    sample_rate INTEGER NOT NULL DEFAULT 0,
+    channels INTEGER NOT NULL DEFAULT 0,
+    waveform BLOB,
+    error TEXT,
+    -- 'placeholder', 'trying' or 'approved'.
+    status TEXT NOT NULL DEFAULT 'placeholder',
+    -- The library file SoundHive last put into the slot; null while it holds its original.
+    source_path TEXT,
+    -- Whether the original file has been backed up (before the first replacement).
+    backed_up INTEGER NOT NULL DEFAULT 0,
+    UNIQUE (project_id, rel_path)
+);
+-- Every library file tried in a slot.
+CREATE TABLE slot_tries (
+    slot_id INTEGER NOT NULL REFERENCES slots(id) ON DELETE CASCADE,
+    source_path TEXT NOT NULL,
+    -- Unix milliseconds of the last time it was put in.
+    tried INTEGER NOT NULL,
+    PRIMARY KEY (slot_id, source_path)
+) WITHOUT ROWID;
+"#,
+];
 
 pub fn open(path: &Path) -> rusqlite::Result<Connection> {
     let conn = Connection::open(path)?;
@@ -118,7 +156,7 @@ pub fn save_settings(conn: &Connection, settings: &Settings) -> AppResult<()> {
 
 // ---- folders ---------------------------------------------------------------------------------
 
-fn folder_name(path: &str) -> String {
+pub(crate) fn folder_name(path: &str) -> String {
     Path::new(path).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| path.to_string())
 }
 

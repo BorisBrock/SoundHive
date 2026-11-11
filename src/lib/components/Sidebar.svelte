@@ -3,6 +3,7 @@
   import { attempt, library, type Folder } from "$lib/app.svelte";
   import { confirm } from "$lib/confirm.svelte";
   import { contextMenu } from "$lib/contextMenu.svelte";
+  import { projects, type Project } from "$lib/project.svelte";
   import { dirTree, type Collection } from "$lib/sounds";
   import DirTree from "./DirTree.svelte";
   import Icon, { type IconName } from "./Icon.svelte";
@@ -81,6 +82,23 @@
     }, "Folder removed");
   }
 
+  function projectMenu(e: MouseEvent, p: Project) {
+    contextMenu.open(e, [
+      {
+        label: projects.activeId === p.id ? "Close" : "Open",
+        icon: "target",
+        action: () => (projects.activeId === p.id ? projects.close() : projects.open(p.id)),
+      },
+      {
+        label: "Open in file manager",
+        icon: "folder-open",
+        action: () => attempt(() => commands.openFolder(p.path)),
+      },
+      null,
+      { label: "Remove project", icon: "trash", danger: true, action: () => projects.remove(p) },
+    ]);
+  }
+
   async function finishRename() {
     const r = renaming;
     renaming = null;
@@ -112,6 +130,56 @@
         </button>
       {/each}
     </nav>
+
+    <div class="mt-5 mb-1 flex items-center px-2">
+      <h3 class="flex-1 text-[11px] font-semibold tracking-wider text-muted uppercase">Target projects</h3>
+      <button
+        class="icon-btn p-1!"
+        title="Add the sound folder of a game, video or other project, to replace its sounds one by one"
+        onclick={() => projects.add()}
+      >
+        <Icon name="plus" size={14} />
+      </button>
+    </div>
+    {#each projects.list as p (p.id)}
+      {@const active = projects.activeId === p.id}
+      <div
+        class="group flex items-center rounded-md pr-1 text-[13px] hover:bg-raised"
+        class:bg-raised={active}
+        class:text-accent={active}
+        role="group"
+        oncontextmenu={(e) => projectMenu(e, p)}
+      >
+        <button
+          class="flex min-w-0 flex-1 items-center gap-2 py-1.5 pl-2 text-left"
+          title={p.available ? `${p.path}\nClick to ${active ? "close" : "open"}` : `${p.path}\nNot found`}
+          onclick={() => (active ? projects.close() : projects.open(p.id))}
+        >
+          <span class:text-muted={!active} class:text-warning={!p.available}>
+            <Icon name={p.available ? "target" : "triangle-alert"} size={14} />
+          </span>
+          <span class="truncate">{p.name}</span>
+          <span class="ml-auto text-[11px] text-muted tabular-nums group-hover:hidden">
+            {p.approvedCount}/{p.slotCount}
+          </span>
+        </button>
+        <button
+          class="icon-btn hidden p-1! group-hover:inline-flex"
+          title="Project actions"
+          onclick={(e) => projectMenu(e, p)}
+        >
+          <Icon name="settings" size={13} />
+        </button>
+      </div>
+    {:else}
+      <button
+        class="mx-2 mt-1 flex w-[calc(100%-1rem)] items-center gap-2 rounded-md border border-dashed border-line px-3 py-2 text-left text-xs text-muted hover:border-accent hover:text-fg"
+        title="Pick the sound folder of a game, video or other project; then replace its makeshift sounds one by one"
+        onclick={() => projects.add()}
+      >
+        <Icon name="target" size={15} /> Replace a project's sounds…
+      </button>
+    {/each}
 
     <div class="mt-5 mb-1 flex items-center px-2">
       <h3 class="flex-1 text-[11px] font-semibold tracking-wider text-muted uppercase">Folders</h3>

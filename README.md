@@ -92,7 +92,15 @@ other sounds are in length, loudness, punch, brightness, attack and tags.
 - **`E`** opens the sound in Audacity (or the editor of your choice).
 - **`P`** copies it into your project folder, never overwriting anything.
 
-Your sound files are only ever read, never changed.
+Your library's sound files are only ever read, never changed.
+
+### 🎯 Replace your project's placeholder sounds
+
+Add the sound folder of your game, video or any other project as a **target project** and go
+through its makeshift sounds one by one: pick a project sound, and SoundHive searches the library
+for its name. Press `R` to put the selected sound into the project, try it out there, and press
+`A` when it fits to move on to the next one. Originals are backed up, sounds you already tried are
+marked, and a progress bar shows how far you are.
 
 ### 🎨 12 themes
 

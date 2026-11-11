@@ -396,3 +396,36 @@ export const LOOP_LABELS: Record<string, string> = {
   name: "Named as a loop",
   seamless: "Seamless: the end flows into the start",
 };
+
+// ---- target projects --------------------------------------------------------------------------
+
+/** Words in project file names that say nothing about the sound. */
+const NOISE_WORDS = new Set([
+  "sfx",
+  "snd",
+  "sound",
+  "sounds",
+  "fx",
+  "se",
+  "audio",
+  "placeholder",
+  "temp",
+  "tmp",
+  "test",
+  "dummy",
+  "new",
+  "copy",
+  "final",
+  "wip",
+]);
+
+/** A search for a project file's name: `SFX_DoorOpen_02` → `door open`. */
+export function searchFromName(name: string): string {
+  return name
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/([A-Za-z]{2,})(\d)/g, "$1 $2")
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((w) => w && !NOISE_WORDS.has(w) && !/^\d+[a-z]?$/.test(w) && !/^v\d+$/.test(w))
+    .join(" ");
+}
