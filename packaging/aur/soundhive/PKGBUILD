@@ -16,6 +16,8 @@ sha256sums=('SKIP')
 
 prepare() {
   cd "$_appname-$pkgver"
+  # The source tarball doesn't carry the version, the release tag does
+  tools/set-version.sh "$pkgver"
   npm ci --no-audit --no-fund
   cargo fetch --locked --manifest-path src-tauri/Cargo.toml --target "$(rustc -vV | sed -n 's/host: //p')"
 }

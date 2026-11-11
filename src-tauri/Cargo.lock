@@ -3834,7 +3834,7 @@ dependencies = [
 
 [[package]]
 name = "soundhive"
-version = "1.0.0"
+version = "0.0.0"
 dependencies = [
  "clipboard-rs",
  "drag",

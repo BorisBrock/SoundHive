@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Sets the app version in package.json, src-tauri/tauri.conf.json and src-tauri/Cargo.toml
-# (and their lock files). Commit the result, then push a tag "v<version>" to release it.
+# (and their lock files). The release workflow and the AUR package run this with the version
+# from the release tag. The repository itself stays at 0.0.0, don't commit the result.
 #
 # Usage: tools/set-version.sh 1.2.0
 set -euo pipefail
@@ -17,5 +18,4 @@ sed -i -E "0,/\"version\": \"[^\"]*\"/s//\"version\": \"$version\"/" src-tauri/t
 sed -i -E "0,/^version = \"[^\"]*\"/s//version = \"$version\"/" src-tauri/Cargo.toml
 cargo metadata --manifest-path src-tauri/Cargo.toml --format-version 1 >/dev/null
 
-echo "Version set to $version. Now:"
-echo "  git commit -am \"Release $version\" && git tag v$version && git push origin main v$version"
+echo "Version set to $version"
