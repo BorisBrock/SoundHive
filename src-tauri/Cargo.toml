@@ -1,6 +1,6 @@
 [package]
 name = "soundhive"
-version = "0.1.0"
+version = "1.0.0"
 description = "Fast sound effect library browser"
 authors = ["Boris Brock"]
 edition = "2024"
