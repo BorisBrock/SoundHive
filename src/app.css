@@ -1,0 +1,260 @@
+@import "tailwindcss";
+
+/*
+ * Themes are plain CSS variables, switched with <html data-theme="…">. Tailwind utilities map
+ * onto them (bg-surface, text-muted, border-line, …), so components never hard-code colours.
+ */
+
+@theme inline {
+  --color-bg: var(--wz-bg);
+  --color-surface: var(--wz-surface);
+  --color-raised: var(--wz-raised);
+  --color-line: var(--wz-line);
+  --color-fg: var(--wz-fg);
+  --color-muted: var(--wz-muted);
+  --color-accent: var(--wz-accent);
+  --color-danger: var(--wz-danger);
+  --color-warning: var(--wz-warning, #f59f00);
+  /* Waveforms and the honey accent of the logo. */
+  --color-wave: var(--wz-wave, var(--wz-accent));
+  --color-honey: #f5a524;
+  --font-sans: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", ui-monospace, monospace;
+}
+
+/* ---- themes -------------------------------------------------------------- */
+
+:root,
+[data-theme="midnight"] {
+  color-scheme: dark;
+  --wz-bg: #0e1116;
+  --wz-surface: #161a21;
+  --wz-raised: #1e232c;
+  --wz-line: #2a303b;
+  --wz-fg: #e6e9ef;
+  --wz-muted: #8b93a3;
+  --wz-accent: #7c9cff;
+  --wz-danger: #ff6b6b;
+}
+
+[data-theme="daylight"] {
+  color-scheme: light;
+  --wz-bg: #f4f5f7;
+  --wz-surface: #ffffff;
+  --wz-raised: #f9fafb;
+  --wz-line: #e2e5ea;
+  --wz-fg: #1b1f27;
+  --wz-muted: #687083;
+  --wz-accent: #3b5bdb;
+  --wz-danger: #d63939;
+}
+
+[data-theme="nord"] {
+  color-scheme: dark;
+  --wz-bg: #2e3440;
+  --wz-surface: #3b4252;
+  --wz-raised: #434c5e;
+  --wz-line: #4c566a;
+  --wz-fg: #eceff4;
+  --wz-muted: #a3acbf;
+  --wz-accent: #88c0d0;
+  --wz-danger: #bf616a;
+}
+
+[data-theme="dracula"] {
+  color-scheme: dark;
+  --wz-bg: #21222c;
+  --wz-surface: #282a36;
+  --wz-raised: #343746;
+  --wz-line: #44475a;
+  --wz-fg: #f8f8f2;
+  --wz-muted: #9aa2c8;
+  --wz-accent: #bd93f9;
+  --wz-danger: #ff5555;
+}
+
+[data-theme="gruvbox"] {
+  color-scheme: dark;
+  --wz-bg: #1d2021;
+  --wz-surface: #282828;
+  --wz-raised: #32302f;
+  --wz-line: #504945;
+  --wz-fg: #ebdbb2;
+  --wz-muted: #a89984;
+  --wz-accent: #fabd2f;
+  --wz-danger: #fb4934;
+}
+
+[data-theme="catppuccin-mocha"] {
+  color-scheme: dark;
+  --wz-bg: #11111b;
+  --wz-surface: #1e1e2e;
+  --wz-raised: #313244;
+  --wz-line: #45475a;
+  --wz-fg: #cdd6f4;
+  --wz-muted: #a6adc8;
+  --wz-accent: #89b4fa;
+  --wz-danger: #f38ba8;
+}
+
+[data-theme="tokyo-night"] {
+  color-scheme: dark;
+  --wz-bg: #16161e;
+  --wz-surface: #1a1b26;
+  --wz-raised: #24283b;
+  --wz-line: #2f334d;
+  --wz-fg: #c0caf5;
+  --wz-muted: #8089b3;
+  --wz-accent: #7aa2f7;
+  --wz-danger: #f7768e;
+}
+
+[data-theme="solarized-dark"] {
+  color-scheme: dark;
+  --wz-bg: #00212b;
+  --wz-surface: #002b36;
+  --wz-raised: #073642;
+  --wz-line: #0e4a59;
+  --wz-fg: #c5ccc6;
+  --wz-muted: #839496;
+  --wz-accent: #268bd2;
+  --wz-danger: #dc322f;
+}
+
+[data-theme="high-contrast"] {
+  color-scheme: dark;
+  --wz-bg: #000000;
+  --wz-surface: #0b0b0b;
+  --wz-raised: #171717;
+  --wz-line: #737373;
+  --wz-fg: #ffffff;
+  --wz-muted: #d4d4d4;
+  --wz-accent: #ffd400;
+  --wz-danger: #ff6b6b;
+}
+
+[data-theme="solarized-light"] {
+  color-scheme: light;
+  --wz-bg: #eee8d5;
+  --wz-surface: #fdf6e3;
+  --wz-raised: #f6efdb;
+  --wz-line: #ddd6c1;
+  --wz-fg: #073642;
+  --wz-muted: #586e75;
+  --wz-accent: #268bd2;
+  --wz-danger: #dc322f;
+}
+
+[data-theme="catppuccin-latte"] {
+  color-scheme: light;
+  --wz-bg: #dce0e8;
+  --wz-surface: #eff1f5;
+  --wz-raised: #e6e9ef;
+  --wz-line: #ccd0da;
+  --wz-fg: #4c4f69;
+  --wz-muted: #6c6f85;
+  --wz-accent: #1e66f5;
+  --wz-danger: #d20f39;
+}
+
+[data-theme="paper"] {
+  color-scheme: light;
+  --wz-bg: #f3f0ea;
+  --wz-surface: #fbfaf7;
+  --wz-raised: #f6f3ee;
+  --wz-line: #e4dfd6;
+  --wz-fg: #2b2722;
+  --wz-muted: #766e64;
+  --wz-accent: #c2410c;
+  --wz-danger: #b91c1c;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--wz-bg);
+  color: var(--wz-fg);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--wz-line);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Inputs share one look. */
+.field {
+  border: 1px solid var(--wz-line);
+  background: var(--wz-raised);
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+  outline: none;
+}
+.field:focus {
+  border-color: var(--wz-accent);
+}
+
+/* Small pill buttons in the filter bar and tag lists. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid var(--wz-line);
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--wz-muted);
+  white-space: nowrap;
+}
+.chip:hover {
+  color: var(--wz-fg);
+  border-color: color-mix(in srgb, var(--wz-accent) 50%, var(--wz-line));
+}
+.chip.on {
+  color: var(--wz-fg);
+  border-color: var(--wz-accent);
+  background: color-mix(in srgb, var(--wz-accent) 18%, transparent);
+}
+
+/* Icon buttons in toolbars and panels. */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border-radius: 6px;
+  padding: 0.3rem;
+  color: var(--wz-muted);
+}
+.icon-btn:hover:not(:disabled) {
+  background: var(--wz-raised);
+  color: var(--wz-fg);
+}
+.icon-btn:disabled {
+  opacity: 0.4;
+}
+.icon-btn.on {
+  color: var(--wz-accent);
+}
+
+kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  border: 1px solid var(--wz-line);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0 0.3rem;
+  background: var(--wz-raised);
+}
