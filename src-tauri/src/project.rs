@@ -9,8 +9,6 @@
 //! would import it), so that it can always be restored.
 
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::sync::atomic::AtomicBool;
@@ -19,12 +17,10 @@ use rayon::prelude::*;
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::analysis::{self, Analysis};
+use crate::convert::{self, format_of};
 use crate::db::{self, now};
 use crate::error::{AppError, AppResult, invalid};
 use crate::models::{Project, Slot, SlotStatus, SlotTry};
-
-/// Longer sounds are not converted (they would not fit in memory comfortably).
-const MAX_CONVERT_SECONDS: u64 = 10 * 60;
 
 fn io_error(e: impl std::fmt::Display) -> AppError {
     AppError::Io { message: e.to_string() }
@@ -265,17 +261,6 @@ pub fn refresh(db: &Mutex<Connection>, project_id: i64) -> AppResult<Vec<Slot>> 
 
 // ---- replacing -------------------------------------------------------------------------------
 
-/// Extension with spelling variants folded together.
-fn format_of(path: &Path) -> String {
-    let ext = path.extension().map(|e| e.to_string_lossy().to_ascii_lowercase()).unwrap_or_default();
-    match ext.as_str() {
-        "wave" => "wav".into(),
-        "aif" => "aiff".into(),
-        "oga" => "ogg".into(),
-        _ => ext,
-    }
-}
-
 /// A hidden file next to `target`, for writing before renaming it over `target`. Hidden files
 /// are skipped by scans, and most engines ignore them.
 fn temp_path(target: &Path) -> PathBuf {
@@ -291,35 +276,8 @@ fn commit_temp(temp: &Path, target: &Path) -> AppResult<()> {
     })
 }
 
-/// Writes 16-bit PCM WAV.
-fn write_wav(path: &Path, pcm: &analysis::Pcm) -> std::io::Result<()> {
-    let channels = pcm.channels.max(1);
-    let data_len = pcm.samples.len() as u64 * 2;
-    if data_len + 36 > u32::MAX as u64 {
-        return Err(std::io::Error::other("too long for a WAV file"));
-    }
-    let mut f = BufWriter::new(File::create(path)?);
-    f.write_all(b"RIFF")?;
-    f.write_all(&(36 + data_len as u32).to_le_bytes())?;
-    f.write_all(b"WAVEfmt ")?;
-    f.write_all(&16u32.to_le_bytes())?;
-    f.write_all(&1u16.to_le_bytes())?; // PCM
-    f.write_all(&channels.to_le_bytes())?;
-    f.write_all(&pcm.sample_rate.to_le_bytes())?;
-    f.write_all(&(pcm.sample_rate * channels as u32 * 2).to_le_bytes())?;
-    f.write_all(&(channels * 2).to_le_bytes())?;
-    f.write_all(&16u16.to_le_bytes())?;
-    f.write_all(b"data")?;
-    f.write_all(&(data_len as u32).to_le_bytes())?;
-    for &s in &pcm.samples {
-        let s = if s.is_finite() { s.clamp(-1.0, 1.0) } else { 0.0 };
-        f.write_all(&((s * 32767.0).round() as i16).to_le_bytes())?;
-    }
-    f.flush()
-}
-
-/// Writes `source` over `target` in the target's format: copied if the formats match, converted
-/// if the target is a WAV file. Other conversions are refused.
+/// Writes `source` over `target` in the target's format: copied if the formats match,
+/// converted otherwise.
 pub fn write_into(source: &Path, target: &Path) -> AppResult<()> {
     let (from, to) = (format_of(source), format_of(target));
     let temp = temp_path(target);
@@ -327,17 +285,14 @@ pub fn write_into(source: &Path, target: &Path) -> AppResult<()> {
         std::fs::copy(source, &temp)
             .map(|_| ())
             .map_err(|e| io_error(format!("Could not copy the sound: {e}")))
-    } else if to == "wav" {
-        analysis::decode(source, MAX_CONVERT_SECONDS)
-            .map_err(|e| invalid(format!("Could not convert the sound: {e}")))
-            .and_then(|pcm| {
-                write_wav(&temp, &pcm).map_err(|e| io_error(format!("Could not write the sound: {e}")))
-            })
     } else {
-        let (from, to) = (from.to_uppercase(), to.to_uppercase());
-        return Err(invalid(format!(
-            "The project uses {to} here, but this sound is {from}. Pick a {to} sound: converting to {to} is not supported yet."
-        )));
+        convert::convert(source, &to, &temp).map_err(|e| {
+            invalid(format!(
+                "Could not convert the {} sound to {}: {e}",
+                from.to_uppercase(),
+                to.to_uppercase()
+            ))
+        })
     };
     if let Err(e) = written {
         let _ = std::fs::remove_file(&temp);
@@ -519,25 +474,34 @@ mod tests {
     }
 
     #[test]
-    fn converts_to_wav_but_not_to_other_formats() {
+    fn converts_to_the_project_format() {
         let dir = tempfile::tempdir().unwrap();
-        // Formats are told apart by content, so a WAV named .aiff stands in for any other format.
-        let src = dir.path().join("hit.aiff");
+        let src = dir.path().join("hit.wav");
         write_test_wav(&src, 48000, 1, &sine(48000, 0.25, 330.0, |_| 0.5), &[]);
 
-        let ogg = dir.path().join("game.ogg");
-        std::fs::write(&ogg, b"old").unwrap();
-        let err = write_into(&src, &ogg).unwrap_err();
-        assert!(err.to_string().contains("OGG"), "{err}");
-        assert_eq!(std::fs::read(&ogg).unwrap(), b"old");
-
+        for name in ["game.ogg", "game.flac", "game.aif"] {
+            let target = dir.path().join(name);
+            std::fs::write(&target, b"old").unwrap();
+            write_into(&src, &target).unwrap();
+            let a = analysis::analyze(&target).unwrap_or_else(|e| panic!("{name}: {e}"));
+            assert!((a.duration - 0.25).abs() < 0.01, "{name}: {}", a.duration);
+            assert_eq!((a.sample_rate, a.channels), (48000, 1), "{name}");
+        }
+        // Formats are told apart by content, so a WAV named .aiff stands in for any other format.
+        let aiff = dir.path().join("hit.aiff");
+        std::fs::copy(&src, &aiff).unwrap();
         let wav = dir.path().join("game.wav");
         std::fs::write(&wav, b"old").unwrap();
-        write_into(&src, &wav).unwrap();
+        write_into(&aiff, &wav).unwrap();
         let a = analysis::analyze(&wav).unwrap();
-        assert!((a.duration - 0.25).abs() < 0.01, "{}", a.duration);
         assert_eq!((a.sample_rate, a.channels, a.bits), (48000, 1, 16));
-        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 3, "no temporary files are left");
+
+        // A failed conversion leaves the target as it was.
+        let odd = dir.path().join("game.xyz");
+        std::fs::write(&odd, b"old").unwrap();
+        assert!(write_into(&src, &odd).is_err());
+        assert_eq!(std::fs::read(&odd).unwrap(), b"old");
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 7, "no temporary files are left");
     }
 
     #[test]

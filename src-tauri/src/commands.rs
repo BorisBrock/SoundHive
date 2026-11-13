@@ -326,6 +326,13 @@ pub async fn refresh_project(db: DbState<'_>, id: i64) -> AppResult<Vec<Slot>> {
     project::refresh(&db.0, id)
 }
 
+/// The formats a library sound of any type can be converted to, for project files of that type.
+#[tauri::command]
+#[specta::specta]
+pub async fn writable_formats() -> Vec<String> {
+    crate::convert::writable_formats()
+}
+
 /// Puts a library sound into a slot (the original is backed up first).
 #[tauri::command]
 #[specta::specta]

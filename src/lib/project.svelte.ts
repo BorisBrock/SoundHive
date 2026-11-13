@@ -5,10 +5,13 @@ import { confirm } from "./confirm.svelte";
 import { normExt, searchFromName } from "./sounds";
 
 export type { Project };
-/** Whether a library sound of type `ext` can go into the slot (as is, or converted to WAV). */
-export function fitsSlot(slot: Slot, ext: string): boolean {
+/**
+ * Whether a library sound of type `ext` can go into the slot: as is, or converted to the slot's
+ * format if that is one of `writable`.
+ */
+export function fitsSlot(slot: Slot, ext: string, writable: readonly string[]): boolean {
   const target = normExt(slot.ext);
-  return target === "wav" || target === normExt(ext);
+  return writable.includes(target) || target === normExt(ext);
 }
 
 /** A sound file of the project; `duration` is a plain number (Rust's f64 may arrive as null). */
@@ -35,6 +38,8 @@ class Projects {
   /** Hide the slots that are done. */
   hideDone = $state(localStorage.getItem("hideDoneSlots") === "1");
   busy = $state(false);
+  /** Formats any library sound can be converted to (MP3 and M4A only with FFmpeg installed). */
+  writable = $state<string[]>(["wav", "aiff", "flac", "ogg"]);
 
   active = $derived(this.list.find((p) => p.id === this.activeId));
   slot = $derived(this.slots.find((s) => s.id === this.slotId));
@@ -53,8 +58,19 @@ class Projects {
     return m;
   });
 
+  /** Whether the active slot takes a library sound of type `ext`. */
+  fits(ext: string): boolean {
+    return !!this.slot && fitsSlot(this.slot, ext, this.writable);
+  }
+
+  /** Whether sounds for the active slot get converted, rather than copied, if of type `ext`. */
+  converts(ext: string): boolean {
+    return !!this.slot && normExt(this.slot.ext) !== normExt(ext);
+  }
+
   async load() {
     await attempt(async () => {
+      this.writable = await commands.writableFormats();
       this.list = await commands.listProjects();
       if (this.activeId !== null && !this.list.some((p) => p.id === this.activeId)) this.setActive(null);
       if (this.activeId !== null) await this.refresh(true);
@@ -145,9 +161,9 @@ class Projects {
     if (s && search && changed) {
       library.resetView();
       library.search = searchFromName(s.name);
-      // Only WAV slots take any format (converted); others need a sound of their own format.
+      // Slots of a format SoundHive cannot write need a sound of their own format.
       const ext = normExt(s.ext);
-      if (ext !== "wav") library.filters.exts = [ext];
+      if (!this.writable.includes(ext)) library.filters.exts = [ext];
     }
   }
 

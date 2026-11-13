@@ -3,7 +3,7 @@
   import { commands } from "$lib/bindings";
   import { contextMenu } from "$lib/contextMenu.svelte";
   import { player } from "$lib/player.svelte";
-  import { fitsSlot, projects, type Slot } from "$lib/project.svelte";
+  import { projects, type Slot } from "$lib/project.svelte";
   import { formatClock, formatDuration, normExt } from "$lib/sounds";
   import Icon, { type IconName } from "./Icon.svelte";
   import Waveform from "./Waveform.svelte";
@@ -15,7 +15,22 @@
   const total = $derived(projects.slots.length);
   const done = $derived(projects.doneCount);
   const candidate = $derived(library.focused);
-  const fits = $derived(!!slot && !!candidate && fitsSlot(slot, candidate.ext));
+  const fits = $derived(!!candidate && projects.fits(candidate.ext));
+  const converts = $derived(!!candidate && projects.converts(candidate.ext));
+  /** Upper-case formats of the slot and of the candidate sound. */
+  const slotFormat = $derived(slot ? normExt(slot.ext).toUpperCase() : "");
+  const candidateFormat = $derived(candidate ? normExt(candidate.ext).toUpperCase() : "");
+  const replaceTitle = $derived.by(() => {
+    if (!slot || !candidate) return "Select a sound in the library";
+    if (!fits) {
+      const needsFfmpeg = slotFormat === "MP3" || slotFormat === "M4A";
+      return needsFfmpeg
+        ? `The project uses ${slotFormat} here. Pick a ${slotFormat} sound, or install FFmpeg to convert other sounds to ${slotFormat}`
+        : `The project uses ${slotFormat} here, which SoundHive cannot convert to; pick a ${slotFormat} sound`;
+    }
+    const conversion = converts ? `, converted from ${candidateFormat} to ${slotFormat}` : "";
+    return `Write “${candidate.name}” into the project as ${slot.name}.${slot.ext}${conversion} (R)`;
+  });
   const slotPlaying = $derived(!!slot && player.playing && player.currentId === -slot.id);
 
   /** Library sounds by path, to name what was tried. */
@@ -159,11 +174,7 @@
           class:bg-raised={!fits}
           class:text-muted={!fits}
           disabled={!fits || projects.busy}
-          title={fits
-            ? `Write “${candidate?.name}” into the project as ${slot.name}.${slot.ext} (R)`
-            : candidate
-              ? `The project uses ${normExt(slot.ext).toUpperCase()} here; pick a ${normExt(slot.ext).toUpperCase()} sound`
-              : "Select a sound in the library"}
+          title={replaceTitle}
           onclick={() => projects.replace()}
         >
           <Icon name="replace" size={15} />
@@ -171,9 +182,11 @@
             {#if !candidate}
               Select a sound in the library
             {:else if fits}
-              Use “{candidate.name}”
+              Use “{candidate.name}”{#if converts}<span class="opacity-75">
+                  · {candidateFormat} → {slotFormat}</span
+                >{/if}
             {:else}
-              Needs a {normExt(slot.ext).toUpperCase()} sound
+              Needs a {slotFormat} sound
             {/if}
           </span>
           <kbd class="opacity-80">R</kbd>

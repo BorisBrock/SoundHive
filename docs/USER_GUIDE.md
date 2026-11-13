@@ -87,9 +87,11 @@ Good to know:
   project.
 - Files are replaced in one step, so a game engine or editor that watches the folder never sees
   a half-written file.
-- A WAV project file takes any sound: other formats are converted to 16-bit WAV. Other project
-  files need a sound of their own format (OGG for OGG, …). The library is filtered to it
-  automatically.
+- Any library sound fits: if its format differs from the project file's, it is converted to the
+  project file's format, keeping its sample rate and channels. WAV, AIFF and FLAC get 16 bits,
+  OGG is Ogg Vorbis at high quality. Converting to MP3 and M4A needs
+  [FFmpeg](https://ffmpeg.org/download.html) on the `PATH`; without it, MP3 and M4A project
+  files take only sounds of their own format, and the library is filtered to it automatically.
 - When you come back to SoundHive, it picks up files you added, changed or removed in the
   project's folder.
 - Your library files are only ever read, never changed.

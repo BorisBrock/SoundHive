@@ -1,5 +1,6 @@
 mod analysis;
 mod commands;
+mod convert;
 mod db;
 mod error;
 mod events;
@@ -55,6 +56,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::add_project,
             commands::remove_project,
             commands::refresh_project,
+            commands::writable_formats,
             commands::replace_slot,
             commands::restore_slot,
             commands::set_slot_approved,

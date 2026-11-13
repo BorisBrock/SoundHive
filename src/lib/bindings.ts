@@ -59,6 +59,8 @@ export const commands = {
 	removeProject: (id: number) => __TAURI_INVOKE<null>("remove_project", { id }),
 	/**  Picks up added, changed and removed files of a project; returns its slots. */
 	refreshProject: (id: number) => __TAURI_INVOKE<Slot_Serialize[]>("refresh_project", { id }),
+	/**  The formats a library sound of any type can be converted to, for project files of that type. */
+	writableFormats: () => __TAURI_INVOKE<string[]>("writable_formats"),
 	/**  Puts a library sound into a slot (the original is backed up first). */
 	replaceSlot: (slotId: number, soundId: number) => __TAURI_INVOKE<Slot_Serialize>("replace_slot", { slotId, soundId }),
 	/**  Puts a slot's original file back. */
