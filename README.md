@@ -130,13 +130,15 @@ Windows SmartScreen may warn about an unknown publisher: click *More info → Ru
 
 ### Arch Linux, CachyOS, Manjaro (AUR)
 
-Install [`soundhive`](https://aur.archlinux.org/packages/soundhive) with an AUR helper:
+Install [`soundhive-bin`](https://aur.archlinux.org/packages/soundhive-bin) with an AUR helper:
 
 ```bash
-paru -S soundhive     # or: yay -S soundhive
+paru -S soundhive-bin     # or: yay -S soundhive-bin
 ```
 
-The package is built from source, which takes a few minutes the first time.
+It installs the prebuilt release in seconds (x86_64). To build from source instead, install
+[`soundhive`](https://aur.archlinux.org/packages/soundhive), which takes a few minutes, or
+[`soundhive-git`](https://aur.archlinux.org/packages/soundhive-git) for the latest commit on `main`.
 
 ### Ubuntu, Debian, Linux Mint, Pop!_OS
 
